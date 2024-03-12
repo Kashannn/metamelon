@@ -1,6 +1,8 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
-import 'package:get/get.dart'; // Import Get
+import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../API/CallApi.dart';
 import '../Models/Data.dart';
 
@@ -12,7 +14,6 @@ class AllData extends StatefulWidget {
 }
 
 class _AllDataState extends State<AllData> {
-  // Declare a controller for state management
   final DataController dataController = Get.put(DataController());
   int currentPage = 0;
   int itemsPerPage = 4;
@@ -20,7 +21,20 @@ class _AllDataState extends State<AllData> {
   @override
   void initState() {
     super.initState();
+    getCurrentPage();
     getAllData();
+  }
+
+  Future<void> getCurrentPage() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      currentPage = prefs.getInt('currentPage') ?? 0;
+    });
+  }
+
+  Future<void> saveCurrentPage(int page) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('currentPage', page);
   }
 
   @override
@@ -33,7 +47,6 @@ class _AllDataState extends State<AllData> {
           'All Data',
           style: TextStyle(color: Colors.white, fontSize: 25),
         ),
-
       ),
       body: Obx(
             () => dataController.isLoading.value
@@ -55,7 +68,9 @@ class _AllDataState extends State<AllData> {
             ),
             SizedBox(width: 20),
             ElevatedButton(
-              onPressed: currentPage < (dataController.allData.length / itemsPerPage - 1) ? () => setPage(currentPage + 1) : null,
+              onPressed: currentPage < (dataController.allData.length / itemsPerPage).ceil() - 1
+                  ? () => setPage(currentPage + 1)
+                  : null,
               child: Text('Next'),
             ),
           ],
@@ -66,7 +81,7 @@ class _AllDataState extends State<AllData> {
 
   Widget buildCustomDataCard(Data data) {
     return Container(
-      margin: EdgeInsets.only(bottom: 15, left: 15, right: 15,top: 15),
+      margin: EdgeInsets.symmetric(vertical: 15, horizontal: 15),
       padding: EdgeInsets.all(15),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -102,7 +117,6 @@ class _AllDataState extends State<AllData> {
                       fontWeight: FontWeight.bold,
                       color: Colors.blue,
                       fontSize: 16,
-
                     ),
                   ),
                 ),
@@ -115,7 +129,8 @@ class _AllDataState extends State<AllData> {
                       bottom: BorderSide(color: Colors.grey),
                     ),
                   ),
-                  child: Text('${data.id}',
+                  child: Text(
+                    '${data.id}',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Colors.blue,
@@ -154,7 +169,8 @@ class _AllDataState extends State<AllData> {
                       bottom: BorderSide(color: Colors.grey),
                     ),
                   ),
-                  child: Text('${data.title}',
+                  child: Text(
+                    '${data.title}',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Colors.green,
@@ -200,11 +216,9 @@ class _AllDataState extends State<AllData> {
     );
   }
 
-
-
   Future<void> getAllData() async {
     try {
-      dataController.setLoading(true); // Set loading to true
+      dataController.setLoading(true);
 
       final response = await CallApi().getData('posts');
 
@@ -212,15 +226,10 @@ class _AllDataState extends State<AllData> {
         final dynamic decodedData = json.decode(response.body);
 
         if (decodedData != null && decodedData is List) {
-          List<Data> dataList = List<Data>.from(
-              decodedData.map((data) => Data.fromJson(data)));
+          List<Data> dataList = List<Data>.from(decodedData.map((data) => Data.fromJson(data)));
 
-          print("Length: ${dataList.length}");
-
-          // Update the state using the controller
           dataController.setAllData(dataList);
 
-          // Update the paginatedData with the initial page
           updatePaginatedData();
         } else {
           print("Invalid data format in the API response.");
@@ -238,6 +247,7 @@ class _AllDataState extends State<AllData> {
   void setPage(int page) {
     setState(() {
       currentPage = page;
+      saveCurrentPage(page);
       updatePaginatedData();
     });
   }
@@ -255,7 +265,7 @@ class _AllDataState extends State<AllData> {
 class DataController extends GetxController {
   RxList<Data> allData = <Data>[].obs;
   RxBool isLoading = true.obs;
-  RxList<Data> paginatedData = <Data>[].obs; // Added a new RxList for paginated data
+  RxList<Data> paginatedData = <Data>[].obs;
 
   void setAllData(List<Data> Data) {
     allData.assignAll(Data);
