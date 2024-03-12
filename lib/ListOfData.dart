@@ -33,12 +33,7 @@ class _AllDataState extends State<AllData> {
           'All Data',
           style: TextStyle(color: Colors.white, fontSize: 25),
         ),
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
+
       ),
       body: Obx(
             () => dataController.isLoading.value
